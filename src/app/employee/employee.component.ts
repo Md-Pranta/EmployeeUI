@@ -3,6 +3,7 @@ import { Employee } from '../employee.model';
 import { EmployeeService } from '../employee.service';
 import { HttpErrorResponse } from '@angular/common/http';
 import { NgForm } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 
 @Component({
   selector: 'app-employee',
@@ -10,18 +11,30 @@ import { NgForm } from '@angular/forms';
   styleUrls: ['./employee.component.css'],
 })
 export class EmployeeComponent implements OnInit {
-  employee: Employee = {
-    employeeId: 0,
-    employeeName: '',
-    employeeContactNumber: '',
-    employeeAddress: '',
-    employeeGender: '',
-    employeeDepartment: '',
-    employeeSkills: '',
-  };
-  constructor(private employeeService: EmployeeService) {}
+  isCreateEmployee: boolean = true;
+  employee: any;
+  skills: string[] = [];
+  constructor(
+    private employeeService: EmployeeService,
+    private router: Router,
+    private activatedRoute: ActivatedRoute
+  ) {}
 
-  ngOnInit(): void {}
+  ngOnInit(): void {
+    this.employee = this.activatedRoute.snapshot.data['employee'];
+
+    console.log(this.employee);
+
+    if (this.employee && this.employee.employeeId > 0) {
+      this.isCreateEmployee = false;
+      if (this.employee.employeeSkills != '') {
+        this.skills = [];
+        this.skills = this.employee.employeeSkills.split(',');
+      }
+    } else {
+      this.isCreateEmployee = true;
+    }
+  }
 
   checkGender(gender: string) {
     return (
@@ -38,23 +51,33 @@ export class EmployeeComponent implements OnInit {
   }
 
   saveEmployee(employeeForm: NgForm): void {
-    this.employeeService.saveEmployee(this.employee).subscribe({
-      next: (res: Employee) => {
-        console.log(res);
-        employeeForm.reset();
-        this.employee.employeeGender = '';
-      },
-      error: (err: HttpErrorResponse) => {
-        console.log(err);
-      },
-    });
+    if (!this.isCreateEmployee) {
+      this.employeeService.saveEmployee(this.employee).subscribe({
+        next: (res: Employee) => {
+          console.log(res);
+          employeeForm.reset();
+          this.employee.employeeGender = '';
+          this.router.navigate(['/employee-list']);
+        },
+        error: (err: HttpErrorResponse) => {
+          console.log(err);
+        },
+      });
+    } else {
+      this.employeeService.updateEmployee(this.employee).subscribe({
+        next: (res: Employee) => {
+          this.router.navigate(['/employee-list']);
+        },
+        error: (err: HttpErrorResponse) => {
+          console.log(err);
+        },
+      });
+    }
   }
 
   setGender(gender: string): void {
     this.employee.employeeGender = gender;
   }
-
-  skills: string[] = [];
 
   onSkillsChanges(event: any): void {
     if (event.checked) {
